@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
+	<sftp:config name="SFTP_Config" doc:name="SFTP Config" doc:id="c8d5443b-8d0e-4322-a33a-f80f89b07867" >
+		<sftp:connection host="192.168.0.137" port="2222" username="tester" password="password" />
+	</sftp:config>
+	<flow name="usecase1Flow" doc:id="7280f24f-a13c-4270-a0e7-74abb987d467" >
+		<scheduler doc:name="Scheduler" doc:id="bf685772-e1f9-4b98-8fd6-cd3e818f1375" >
+			<scheduling-strategy >
+				<cron expression="0 0 11 ? * *" />
+			</scheduling-strategy>
+		</scheduler>
+		<sftp:list doc:name="List" doc:id="1b0069b4-ecc1-4586-a8e5-d7e0aa0c6a05" config-ref="SFTP_Config" directoryPath="/source/sampleCSVFile_11kb.csv"/>
+		<logger level="INFO" doc:name="Logger" doc:id="e4a4e4df-2c77-4b6b-8162-307c6ccc8082" message="#[payload]"/>
+		<foreach doc:name="For Each" doc:id="1568d58d-2faa-4fcb-8884-899cb6ef9935" >
+			<try doc:name="Try" doc:id="85673cc6-e07d-4334-9e7e-1ab1eaaa3b5a" >
+				<set-variable value="#[attributes.fileName]" doc:name="Set Variable" doc:id="40ab8e74-5d3b-4f0b-8b8d-9d6c6408034e" variableName="filename"/>
+				<sftp:read doc:name="Read" doc:id="b7909110-0e8b-4f9f-8422-e1f4a7be2220" config-ref="SFTP_Config" path="#[attributes.path]"/>
+				<sftp:write doc:name="Write" doc:id="bf9500c5-51b3-4a73-b4f8-b60e8c27f7d7" config-ref="SFTP_Config" path='#["target/"++ vars.filename]'/>
+				<sftp:write doc:name="Write" doc:id="5bfe4840-f286-45c1-8525-596f110f2c17" config-ref="SFTP_Config" path='#["archieve/"++ vars.filename]'/>
+				<sftp:delete doc:name="Delete" doc:id="dfce2400-89ff-4b64-8339-4e9a68b176f9" config-ref="SFTP_Config" path='#["source/"++ vars.filename]'/>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c4222cb0-7250-4a01-b91b-af385244159c" >
+						<sftp:write doc:name="Write" doc:id="8b03972f-c09d-418b-b603-c9978dc34196" config-ref="SFTP_Config" path='#["error/" ++  vars.filename]'/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+	</flow>
+</mule>
